@@ -20,12 +20,39 @@ namespace JackCompiling
             var openToken = tokenizer.Read("{");                        // {
 
 
+            var classVarDec = ReadClassVarDec();                        // classVarDec
+            var subroutineDec = ReadSubroutineDec();                    // subroutineDec
 
 
+            var closeToken = tokenizer.Read("}");                       // }
 
+            return new ClassSyntax(classToken, classNameToken, openToken, classVarDec, subroutineDec, closeToken);
+        }
 
+        public ClassVarDecSyntax ReadClassVarDec()
+        {
+            var token = tokenizer.Read(TokenType.Keyword);              // static | field
+            if (token.Value != "static" || token.Value != "field")
+                throw new ExpectedException("static or field", token);
+
+            var nextToken = tokenizer.Read();
+
+            var typeToken = nextToken;
+
+            if (nextToken.TokenType == TokenType.Keyword)
+            {
+                if (nextToken.Value != "int" || nextToken.Value != "char" || nextToken.Value != "boolean")
+                    throw new ExpectedException("int or char or bolean", nextToken);
+            }
+
+            
+        }
+
+        public SubroutineDecSyntax ReadSubroutineDec()
+        {
             throw new NotImplementedException();
         }
+
         #region Сдеданый код
         public StatementsSyntax ReadStatements()
         {
