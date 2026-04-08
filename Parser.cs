@@ -264,9 +264,9 @@ namespace JackCompiling
 
             ElseClause? elseClause = null;
 
-            var nextToken = tokenizer.Read();
+            var nextToken = tokenizer.TryReadNext();
 
-            if (nextToken.Value == "else")
+            if (nextToken != null && nextToken.Value == "else")
             {
                 var elseToken = nextToken;                 // else
                 var openElseToken = tokenizer.Read("{");   // {
