@@ -6,54 +6,184 @@ namespace JackCompiling
 {
     public class Parser
     {
+        #region Конструктор
         private readonly Tokenizer tokenizer;
 
         public Parser(Tokenizer tokenizer)
         {
             this.tokenizer = tokenizer;
         }
+        #endregion
 
+        #region Обработка класса
         public ClassSyntax ReadClass()
         {
             var classToken = tokenizer.Read("class");                   // class
             var classNameToken = tokenizer.Read(TokenType.Identifier);  // className
             var openToken = tokenizer.Read("{");                        // {
 
+            var nextToken = tokenizer.Read();
 
-            var classVarDec = ReadClassVarDec();                        // classVarDec
-            var subroutineDec = ReadSubroutineDec();                    // subroutineDec
+            var classVars = new List<ClassVarDecSyntax>();
+            while (nextToken.Value == "static" || nextToken.Value == "field")
+            {
+                tokenizer.PushBack(nextToken);
+                var classVarDec = ReadClassVarDec();                    // classVarDec
+                classVars.Add(classVarDec);
+                nextToken = tokenizer.Read();
+            }
+            
+            var subrounineDecList = new List<SubroutineDecSyntax>();
+            while (nextToken.Value == "constructor" || nextToken.Value == "function" || nextToken.Value == "method")
+            {
+                tokenizer.PushBack(nextToken);
+                var subroutineDec = ReadSubroutineDec();                // subroutineDec
+                subrounineDecList.Add(subroutineDec);
+                nextToken = tokenizer.Read();
+            }
 
+            tokenizer.PushBack(nextToken);
 
             var closeToken = tokenizer.Read("}");                       // }
 
-            return new ClassSyntax(classToken, classNameToken, openToken, classVarDec, subroutineDec, closeToken);
+            return new ClassSyntax(classToken, classNameToken, openToken, classVars, subrounineDecList, closeToken);  // class className { classVarDec* subroutineDec* }
         }
 
         public ClassVarDecSyntax ReadClassVarDec()
         {
             var token = tokenizer.Read(TokenType.Keyword);              // static | field
-            if (token.Value != "static" || token.Value != "field")
+            if (token.Value != "static" && token.Value != "field")
                 throw new ExpectedException("static or field", token);
 
             var nextToken = tokenizer.Read();
 
-            var typeToken = nextToken;
+            var typeToken = nextToken;                                  // type
 
-            if (nextToken.TokenType == TokenType.Keyword)
+            if (!IsTypeToken(nextToken))
             {
-                if (nextToken.Value != "int" || nextToken.Value != "char" || nextToken.Value != "boolean")
-                    throw new ExpectedException("int or char or bolean", nextToken);
+                throw new ExpectedException("int or char or bolean or identifier", nextToken);
             }
 
-            
+            var varNameTokens = tokenizer.ReadDelimitedList(() => tokenizer.Read(TokenType.Identifier), ",", ";");
+
+            var semicolon = tokenizer.Read(";");
+
+            return new ClassVarDecSyntax(token, typeToken, varNameTokens, semicolon);  // (static | field) type varName (, varname)* ;
         }
 
         public SubroutineDecSyntax ReadSubroutineDec()
         {
-            throw new NotImplementedException();
-        }
+            var token = tokenizer.Read(TokenType.Keyword);              // constructor | function | method
+            if (token.Value != "constructor" && token.Value != "function" && token.Value != "method")
+                throw new ExpectedException("constructor or function or method", token);
 
-        #region Сдеданый код
+            var nextToken = tokenizer.Read();
+
+            var typeToken = nextToken;                                  // type
+
+            if (!IsTypeToken(nextToken))
+            {
+                if (nextToken.Value != "void")
+                    throw new ExpectedException("int or char or bolean", nextToken);
+            }
+
+            var subroutineName = tokenizer.Read(TokenType.Identifier);  // subroutineName
+            var openToken = tokenizer.Read("(");                        // (
+            var parameterList = ReadParameterList();                    // parameterList
+            var closeToken = tokenizer.Read(")");                       // )
+            var subroutineBody = ReadSubroutineBody();                  // subroutineBody
+
+            return new SubroutineDecSyntax(token, typeToken, subroutineName, openToken, parameterList, closeToken, subroutineBody);
+        }
+        
+        public SubroutineBodySyntax ReadSubroutineBody()
+        {
+            var open = tokenizer.Read("{");
+            var varDecList = new List<VarDecSyntax>();
+
+            var nextToken = tokenizer.Read();
+            
+
+            while (nextToken.Value == "var")
+            {
+                tokenizer.PushBack(nextToken);
+                var varDec = ReadVarDec();
+                varDecList.Add(varDec);
+                nextToken = tokenizer.Read();
+            }
+            tokenizer.PushBack(nextToken);
+
+            var statements = ReadStatements();
+            var close = tokenizer.Read("}");
+
+            return new SubroutineBodySyntax(open, varDecList, statements, close);
+        }
+        
+        public VarDecSyntax ReadVarDec()
+        {
+            var varToken = tokenizer.Read("var");  // var
+
+            var nextToken = tokenizer.Read();
+
+            var typeToken = nextToken;             // type
+
+            if (!IsTypeToken(nextToken))
+            {
+                throw new ExpectedException("int or char or bolean", nextToken);
+            }
+
+            var varNameTokens = tokenizer.ReadDelimitedList(() => tokenizer.Read(), ",", ";");
+
+            var semicolon = tokenizer.Read(";");
+
+            return new VarDecSyntax(varToken, typeToken, varNameTokens, semicolon);
+        }
+        
+        public ParameterListSyntax ReadParameterList()
+        {
+            var parameters = new List<Parameter>();
+
+            var nextToken = tokenizer.Read();
+
+            if (nextToken.Value == ")")
+            {
+                tokenizer.PushBack(nextToken);
+                return new ParameterListSyntax(parameters);
+            }
+
+
+            var go = true;
+
+            if (!IsTypeToken(nextToken))
+                throw new ExpectedException("int or char od boolean or identifier", nextToken);
+
+            while (go)
+            {
+                var typeToken = nextToken;
+                if (!IsTypeToken(typeToken))
+                    throw new ExpectedException("int or char or boolean or identidier", typeToken);
+                var varName = tokenizer.Read(TokenType.Identifier);
+
+                var nextNextToken = tokenizer.Read();
+                if (nextNextToken.Value != ",")
+                {
+                    go = false;
+                    tokenizer.PushBack(nextNextToken);
+                    if (nextNextToken.Value != ")")
+                        throw new ExpectedException(")", nextNextToken);
+                }
+                nextToken = tokenizer.Read();
+
+                parameters.Add(new Parameter(typeToken, varName));
+            }
+
+            tokenizer.PushBack(nextToken);
+
+            return new ParameterListSyntax(parameters);
+        }
+        #endregion
+
+        #region Обработка statements
         public StatementsSyntax ReadStatements()
         {
             var token = tokenizer.Read();  // let / if / while / do / return
@@ -61,23 +191,30 @@ namespace JackCompiling
 
             tokenizer.PushBack(token);
 
-            switch (token.Value)
+            while (IsStatement(token))
             {
-                case "let":
-                    statements.Add(ReadLetStatement());
-                    break;
-                case "if":
-                    statements.Add(ReadIfStatement());
-                    break;
-                case "while":
-                    statements.Add(ReadWhileStatement());
-                    break;
-                case "do":
-                    statements.Add(ReadDoStatement());
-                    break;
-                case "return":
-                    statements.Add(ReadReturnStatement());
-                    break; 
+                switch (token.Value)
+                {
+                    case "let":
+                        statements.Add(ReadLetStatement());
+                        break;
+                    case "if":
+                        statements.Add(ReadIfStatement());
+                        break;
+                    case "while":
+                        statements.Add(ReadWhileStatement());
+                        break;
+                    case "do":
+                        statements.Add(ReadDoStatement());
+                        break;
+                    case "return":
+                        statements.Add(ReadReturnStatement());
+                        break;
+                }
+
+                
+
+                break;
             }
             
             return new StatementsSyntax(statements);
@@ -101,6 +238,8 @@ namespace JackCompiling
             }
 
             Token equalToken = nextToken;  // =
+            if (equalToken.Value != "=")
+                throw new ExpectedException("=", equalToken);
             if (index != null) 
                 equalToken = tokenizer.Read("=");
 
@@ -129,7 +268,9 @@ namespace JackCompiling
             {
                 var elseToken = nextToken;                 // else
                 var openElseToken = tokenizer.Read("{");   // {
+
                 var statementsElse = ReadStatements();     // statements
+
                 var closeElseToken = tokenizer.Read("}");  // }
 
                 elseClause = new ElseClause(elseToken, openElseToken, statements, closeElseToken);  // else { statements }
@@ -270,7 +411,7 @@ namespace JackCompiling
                         return new ParenthesizedTermSyntax(open, expression, close);  // ( expression )
                     }
 
-                    throw new Exception("Неправильная константа");
+                    throw new ExpectedException("Неправильная константа", token);
 
                 case TokenType.Identifier:
                     var varName = token;
@@ -314,27 +455,32 @@ namespace JackCompiling
             {
                 expressionList.Add(ReadExpression());
                 var comma = tokenizer.Read();
-                if (comma.Value == ",")
-                {
-                    token = tokenizer.Read();
-                }
-                else
+                if (comma.Value != ",")
                 {
                     tokenizer.PushBack(comma);
                     haveExpression = false;
                 }
-
             }
 
             return new ExpressionListSyntax(expressionList);
         }
         #endregion
-        public ParameterListSyntax ReadParameterList()
+
+        #region Мои частные методы
+        private bool IsTypeToken(Token token)
         {
-            throw new NotImplementedException();
+            if (token.TokenType == TokenType.Identifier)
+                return true;
+            else if (token.TokenType == TokenType.Keyword)
+                return token.Value == "int" || token.Value == "char" || token.Value == "boolean";
+
+            return false;
         }
 
-
+        private bool IsStatement(Token token)
+        {
+            return token.Value == "let" || token.Value == "if" || token.Value == "while" || token.Value == "do" || token.Value == "return";
+        }
 
         private bool HaveExpression(Token nextToken)
         {
@@ -358,5 +504,6 @@ namespace JackCompiling
 
             return haveExpression;
         }
+        #endregion
     }
 }
