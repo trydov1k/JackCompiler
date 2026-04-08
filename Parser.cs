@@ -212,11 +212,13 @@ namespace JackCompiling
                         break;
                 }
 
-                
-
-                break;
+                var nextToken = tokenizer.TryReadNext();
+                if (nextToken == null)
+                    break;
+                token = nextToken;
+                tokenizer.PushBack(nextToken);
             }
-            
+
             return new StatementsSyntax(statements);
         }
 
@@ -238,10 +240,10 @@ namespace JackCompiling
             }
 
             Token equalToken = nextToken;  // =
-            if (equalToken.Value != "=")
-                throw new ExpectedException("=", equalToken);
             if (index != null) 
                 equalToken = tokenizer.Read("=");
+            if (equalToken.Value != "=")
+                throw new ExpectedException("=", equalToken);
 
             var value = ReadExpression();  // expression
 
