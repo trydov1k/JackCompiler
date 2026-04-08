@@ -186,8 +186,12 @@ namespace JackCompiling
         #region Обработка statements
         public StatementsSyntax ReadStatements()
         {
-            var token = tokenizer.Read();  // let / if / while / do / return
+            var token = tokenizer.TryReadNext();  // let / if / while / do / return
+
             var statements = new List<StatementSyntax>();
+
+            if (token == null)
+                return new StatementsSyntax(statements);            
 
             tokenizer.PushBack(token);
 
