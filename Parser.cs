@@ -25,17 +25,15 @@ namespace JackCompiling
             var classVars = new List<ClassVarDecSyntax>();
             while (nextToken.Value == "static" || nextToken.Value == "field")
             {
-                tokenizer.PushBack(nextToken);
-                var classVarDec = ReadClassVarDec();                    // classVarDec
-                classVars.Add(classVarDec);
+                tokenizer.PushBack(nextToken);      
+                classVars.Add(ReadClassVarDec());                       // classVarDec
                 nextToken = tokenizer.Read();
             }            
             var subrounineDecList = new List<SubroutineDecSyntax>();
             while (nextToken.Value == "constructor" || nextToken.Value == "function" || nextToken.Value == "method")
             {
                 tokenizer.PushBack(nextToken);
-                var subroutineDec = ReadSubroutineDec();                // subroutineDec
-                subrounineDecList.Add(subroutineDec);
+                subrounineDecList.Add(ReadSubroutineDec());            // subroutineDec
                 nextToken = tokenizer.Read();
             }
             tokenizer.PushBack(nextToken);
@@ -242,7 +240,6 @@ namespace JackCompiling
             var figureCloseToken = tokenizer.Read("}");  // }
 
             ElseClause? elseClause = null;
-
             var nextToken = tokenizer.TryReadNext();
             if (nextToken != null && nextToken.Value == "else")
             {
@@ -250,12 +247,13 @@ namespace JackCompiling
                 var statementsElse = ReadStatements();     // statements
                 var closeElseToken = tokenizer.Read("}");  // }
 
-                elseClause = new ElseClause(nextToken, openElseToken, statementsElse, closeElseToken);  // else { statements }
+                elseClause = new ElseClause(nextToken, openElseToken, 
+                    statementsElse, closeElseToken);  // else { statements }
             }
             if (elseClause == null)
                 tokenizer.PushBack(nextToken);
-
-            return new IfStatementSyntax(ifToken, openToken, condition, closeToken, figureOpenToken, statements, figureCloseToken, elseClause);
+            return new IfStatementSyntax(ifToken, openToken, condition, closeToken, 
+                figureOpenToken, statements, figureCloseToken, elseClause);
         }
         
         public WhileStatementSyntax ReadWhileStatement()
@@ -362,7 +360,8 @@ namespace JackCompiling
                     return new ValueTermSyntax(token, null);  // constant
 
                 case TokenType.Keyword:
-                    if (token.Value == "true" || token.Value == "false" || token.Value == "null" || token.Value == "this")
+                    if (token.Value == "true" || token.Value == "false" 
+                        || token.Value == "null" || token.Value == "this")
                         return new ValueTermSyntax(token, null);  // true | false | null | this
                     throw new Exception("Неправильная константа");
 
@@ -447,7 +446,8 @@ namespace JackCompiling
 
         private bool IsStatement(Token token)
         {
-            return token.Value == "let" || token.Value == "if" || token.Value == "while" || token.Value == "do" || token.Value == "return";
+            return token.Value == "let" || token.Value == "if" || token.Value == "while" 
+                || token.Value == "do" || token.Value == "return";
         }
 
         private bool HaveExpression(Token nextToken)
