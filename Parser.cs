@@ -419,7 +419,9 @@ namespace JackCompiling
                     var varName = token;
 
                     Indexing? index = null;
-                    var nextToken = tokenizer.Read();
+                    var nextToken = tokenizer.TryReadNext();
+                    if (nextToken == null)
+                        return new ValueTermSyntax(varName, null);
 
                     if (nextToken.Value == "[")  // [ expression ]
                     {
