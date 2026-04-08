@@ -279,7 +279,7 @@ namespace JackCompiling
 
                 var closeElseToken = tokenizer.Read("}");  // }
 
-                elseClause = new ElseClause(elseToken, openElseToken, statements, closeElseToken);  // else { statements }
+                elseClause = new ElseClause(elseToken, openElseToken, statementsElse, closeElseToken);  // else { statements }
             }
 
             if (elseClause == null)
