@@ -335,14 +335,14 @@ namespace JackCompiling
 
             List<ExpressionTail> tail = new();
 
-            var nextToken = tokenizer.Read();
+            var nextToken = tokenizer.TryReadNext();
 
-            while (ops.Contains(nextToken.Value))
+            while (nextToken != null && ops.Contains(nextToken.Value))
             {
                 var op = nextToken;
                 var trm = ReadTerm();
                 tail.Add(new ExpressionTail(op, trm));
-                nextToken = tokenizer.Read();
+                nextToken = tokenizer.TryReadNext();
             }
             tokenizer.PushBack(nextToken);
 
