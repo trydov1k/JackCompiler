@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace JackCompiling
 {
     public partial class CodeWriter
     {
-        public static Dictionary<string, string> OperatorToVmLine = new() 
+        private static Dictionary<string, string> OperatorToVmLine = new() 
         {
             { "+", "add" },
             { "-", "sub" },
@@ -18,6 +17,21 @@ namespace JackCompiling
             { ">", "gt" },
             { "=", "eq" }
         };
+
+        private static Dictionary<string, string> UnaryOpToVmLine = new()
+        {
+            { "-", "neg" },
+            { "~", "not" }
+        };
+
+        private static Dictionary<string, string> KeywordConstantToVm = new()
+        {
+            { "true", "push constant -1" },
+            { "false", "push constant 0" },
+            { "this", "push pointer 0" },
+            { "that", "push pointer 1" }
+        };
+
         /// <summary>2+x</summary>
         public void WriteExpression(ExpressionSyntax expression)
         {
@@ -49,16 +63,29 @@ namespace JackCompiling
         /// <summary>42 | true | false | varName | -x | ( x )</summary>
         private bool TryWriteNumericTerm(TermSyntax term)
         {
-            if (term is ValueTermSyntax)
+            if (term is ValueTermSyntax)  // true | 42 | x | "hello"
+                WriteValueTermSyntax((ValueTermSyntax)term);
+            else if (term is UnaryOpTermSyntax)  // -x | ~y
+                WriteUnaryOpTermSyntax((UnaryOpTermSyntax)term);
+            else if (term is ParenthesizedTermSyntax)  // (x+y)
+                WriteParenthesizedTermSyntax((ParenthesizedTermSyntax)term);
+            else if (term is SubroutineCallTermSyntax)  // Main.f(0) | point1.GetX()
+                WriteSubroutineCallTermSyntax((SubroutineCallTermSyntax)term);
+            else
+                return false;  // Если это неизвестная штучка, возвращаем false
+
+            return true;
+        }
+
+        private void WriteValueTermSyntax(ValueTermSyntax term)
+        {
+            switch (term.Value.TokenType)
             {
-                var t = (ValueTermSyntax)term;
-                if (t.Value.TokenType == TokenType.IntegerConstant)
-                {
-                    Write($"push constant {t.Value.IntValue}");
-                }
-                else if (t.Value.TokenType == TokenType.StringConstant)
-                {
-                    var stringConstant = t.Value.Value;
+                case TokenType.IntegerConstant:
+                    Write($"push constant {term.Value.IntValue}");
+                    break;
+                case TokenType.StringConstant:
+                    var stringConstant = term.Value.Value;
 
                     Write($"push constant {stringConstant.Length}");
                     Write($"call String.new 1");
@@ -66,78 +93,56 @@ namespace JackCompiling
                     {
                         Write($"push constant {(int)chr}");
                         Write($"call String.appendChar 2");
-                    }                        
-                }
-                else if (t.Value.TokenType == TokenType.Keyword)
-                {
-                    string vmLine;
-                    switch (t.Value.Value)
-                    {
-                        case "true":
-                            vmLine = "push constant -1";
-                            break;
-                        case "false":
-                            vmLine = "push constant 0";
-                            break;
-                        case "this":
-                            vmLine = "push pointer 0";
-                            break;
-                        case "that":
-                            vmLine = "push pointer 1";
-                            break;
-                        default:
-                            throw new ArgumentException("Неизвестная Keyword constant");
                     }
+                    break;
+                case TokenType.Keyword:
+                    var vmLine = KeywordConstantToVm[term.Value.Value];
                     Write(vmLine);
-                }
-                else if (t.Indexing == null)
-                {
-                    var info = FindVarInfo(t.Value.Value);
-                    var segmentName = info.SegmentName;
-                    var index = info.Index;
-                    Write($"push {segmentName} {index}");
-                }
-                else
-                {
-                    // Индексация !!!
-                    var info = FindVarInfo(t.Value.Value);
+                    break;
+                case TokenType.Identifier:
+                    var info = FindVarInfo(term.Value.Value);
                     var segmentName = info.SegmentName;
                     var segmentIndex = info.Index;
-                    var index = t.Indexing.Index;
 
-                    WriteExpression(index);
-                    Write($"push {segmentName} {segmentIndex}");
-                    Write("add");
-                    Write($"pop pointer 1");
-                    Write($"push that 0");
-                    
-                }
-            }
-            else if (term is UnaryOpTermSyntax)
-            {
-                var t = (UnaryOpTermSyntax)term;
-                var negOrNot = t.UnaryOp.Value == "-" ? "neg" : "not";
-                WriteTerm(t.Term);
-                Write(negOrNot);
-            }
-            else if (term is ParenthesizedTermSyntax)
-            {
-                var t = (ParenthesizedTermSyntax)term;
-                WriteExpression(t.Expression);
-            }
-            else if (term is SubroutineCallTermSyntax)
-            {
-                var t = (SubroutineCallTermSyntax)term;
-                var call = t.Call;
-                foreach (var arg in call.Arguments.DelimitedExpressions)
-                    WriteExpression(arg);
-                
-                Write($"call {call.ObjectOrClass.Name.Value}.{call.SubroutineName.Value} {call.Arguments.DelimitedExpressions.Count}");
-            }
-            else 
-                return false;
+                    if (term.Indexing != null)
+                    {
+                        var index = term.Indexing.Index;
 
-            return true;
+                        WriteExpression(index);
+                        Write($"push {segmentName} {segmentIndex}");
+                        Write("add");
+                        Write($"pop pointer 1");
+                        Write($"push that 0");
+                    }
+                    else
+                        Write($"push {segmentName} {segmentIndex}");
+                    break;
+            }
+        }
+
+        private void WriteUnaryOpTermSyntax(UnaryOpTermSyntax term)
+        {
+            var opVmLine = UnaryOpToVmLine[term.UnaryOp.Value];
+            WriteTerm(term.Term);
+            Write(opVmLine);
+        }
+
+        private void WriteParenthesizedTermSyntax(ParenthesizedTermSyntax term)
+        {
+            WriteExpression(term.Expression);
+        }
+
+        private void WriteSubroutineCallTermSyntax(SubroutineCallTermSyntax term)
+        {
+            var call = term.Call;
+            foreach (var arg in call.Arguments.DelimitedExpressions)
+                WriteExpression(arg);
+
+            var objectOrClassName = call.ObjectOrClass.Name.Value;
+            var subroutineName = call.SubroutineName.Value;
+            var argumentsCount = call.Arguments.DelimitedExpressions.Count;
+
+            Write($"call {objectOrClassName}.{subroutineName} {argumentsCount}");
         }
     }
 }
