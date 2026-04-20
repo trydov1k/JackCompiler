@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace JackCompiling
 {
@@ -51,10 +52,43 @@ namespace JackCompiling
             if (term is ValueTermSyntax)
             {
                 var t = (ValueTermSyntax)term;
-                if (t.Value.TokenType != TokenType.Identifier)
+                if (t.Value.TokenType == TokenType.IntegerConstant)
                 {
-                    var value = (t.Value.Value == "true") ? "-1" : (t.Value.Value == "false") ? "0" : t.Value.Value;
-                    Write($"push constant {value}");
+                    Write($"push constant {t.Value.IntValue}");
+                }
+                else if (t.Value.TokenType == TokenType.StringConstant)
+                {
+                    var stringConstant = t.Value.Value;
+
+                    Write($"push constant {stringConstant.Length}");
+                    Write($"call String.new 1");
+                    foreach (var chr in stringConstant)
+                    {
+                        Write($"push constant {(int)chr}");
+                        Write($"call String.appendChar 2");
+                    }                        
+                }
+                else if (t.Value.TokenType == TokenType.Keyword)
+                {
+                    string vmLine;
+                    switch (t.Value.Value)
+                    {
+                        case "true":
+                            vmLine = "push constant -1";
+                            break;
+                        case "false":
+                            vmLine = "push constant 0";
+                            break;
+                        case "this":
+                            vmLine = "push pointer 0";
+                            break;
+                        case "that":
+                            vmLine = "push pointer 1";
+                            break;
+                        default:
+                            throw new ArgumentException("Неизвестная Keyword constant");
+                    }
+                    Write(vmLine);
                 }
                 else if (t.Indexing == null)
                 {
@@ -65,7 +99,18 @@ namespace JackCompiling
                 }
                 else
                 {
+                    // Индексация !!!
+                    var info = FindVarInfo(t.Value.Value);
+                    var segmentName = info.SegmentName;
+                    var segmentIndex = info.Index;
+                    var index = t.Indexing.Index;
 
+                    WriteExpression(index);
+                    Write($"push {segmentName} {segmentIndex}");
+                    Write("add");
+                    Write($"pop pointer 1");
+                    Write($"push that 0");
+                    
                 }
             }
             else if (term is UnaryOpTermSyntax)
@@ -77,11 +122,17 @@ namespace JackCompiling
             }
             else if (term is ParenthesizedTermSyntax)
             {
-
+                var t = (ParenthesizedTermSyntax)term;
+                WriteExpression(t.Expression);
             }
             else if (term is SubroutineCallTermSyntax)
             {
-
+                var t = (SubroutineCallTermSyntax)term;
+                var call = t.Call;
+                foreach (var arg in call.Arguments.DelimitedExpressions)
+                    WriteExpression(arg);
+                
+                Write($"call {call.ObjectOrClass.Name.Value}.{call.SubroutineName.Value} {call.Arguments.DelimitedExpressions.Count}");
             }
             else 
                 return false;
