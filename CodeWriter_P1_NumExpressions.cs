@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace JackCompiling
 {
@@ -108,10 +109,7 @@ namespace JackCompiling
                     {
                         var index = term.Indexing.Index;
 
-                        WriteExpression(index);
-                        Write($"push {segmentName} {segmentIndex}");
-                        Write("add");
-                        Write($"pop pointer 1");
+                        WriteIndexValueToStack(index, segmentName, segmentIndex);
                         Write($"push that 0");
                     }
                     else
@@ -143,6 +141,15 @@ namespace JackCompiling
             var argumentsCount = call.Arguments.DelimitedExpressions.Count;
 
             Write($"call {objectOrClassName}.{subroutineName} {argumentsCount}");
+        }
+
+
+        private void WriteIndexValueToStack(ExpressionSyntax index, string segmentName, int segmentIndex)
+        {
+            WriteExpression(index);
+            Write($"push {segmentName} {segmentIndex}");
+            Write("add");
+            Write($"pop pointer 1");
         }
     }
 }
