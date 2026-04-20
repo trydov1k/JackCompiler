@@ -6,18 +6,18 @@ namespace JackCompiling
 {
     public partial class CodeWriter
     {
-       public static Dictionary<string, string> OperatorToVmLine = new() 
-       {
-           { "+", "add" },
-           { "-", "sub" },
-           { "*", "call Math.multiply 2" },
-           { "/", "call Math.divide 2" },
-           { "|", "or" },
-           { "&", "and" },
-           { "<", "lt" },
-           { ">", "gt" },
-           { "=", "eq" }
-       };
+        public static Dictionary<string, string> OperatorToVmLine = new() 
+        {
+            { "+", "add" },
+            { "-", "sub" },
+            { "*", "call Math.multiply 2" },
+            { "/", "call Math.divide 2" },
+            { "|", "or" },
+            { "&", "and" },
+            { "<", "lt" },
+            { ">", "gt" },
+            { "=", "eq" }
+        };
         /// <summary>2+x</summary>
         public void WriteExpression(ExpressionSyntax expression)
         {
