@@ -83,17 +83,6 @@ namespace JackCompiling
                 case TokenType.IntegerConstant:
                     Write($"push constant {term.Value.IntValue}");
                     break;
-                case TokenType.StringConstant:
-                    var stringConstant = term.Value.Value;
-
-                    Write($"push constant {stringConstant.Length}");
-                    Write($"call String.new 1");
-                    foreach (var chr in stringConstant)
-                    {
-                        Write($"push constant {(int)chr}");
-                        Write($"call String.appendChar 2");
-                    }
-                    break;
                 case TokenType.Keyword:
                     var vmLine = KeywordConstantToVm[term.Value.Value];
                     Write(vmLine);

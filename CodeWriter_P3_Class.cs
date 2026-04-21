@@ -6,7 +6,7 @@ namespace JackCompiling
 {
     public partial class CodeWriter
     {
-        #region Реализовано 100%
+        #region Реализовано
         /// <summary>
         /// class Name { ... }
         /// </summary>
@@ -42,23 +42,26 @@ namespace JackCompiling
         /// </summary>
         private void WriteConstructor(SubroutineDecSyntax subroutine)
         {
-            var arguments = subroutine.ParameterList.DelimitedParameters;  // Аргументы конструктора
 
-            Write($"function {currentClassName}.{subroutine.Name.Value} {arguments.Count}");
+            var arguments = subroutine.ParameterList.DelimitedParameters;  // Аргументы конструктора
 
             var dict = CreateMethodSymbolsTableByArguments(arguments);
 
             var argumentsCount = arguments.Count;
-
-            Write($"push constant {argumentsCount}");  // указываем для скольки полей нам надо найти место в памяти
-            Write("call Memory.alloc 1");  // Находим место в памяти (теперь в стеке начальный адрес объекта)
-            Write($"pop pointer 0");  // Устанавливаем this = ...
 
             var subroutineBody = subroutine.SubroutineBody;
 
             var statementVars = subroutineBody.VarDec;  // Переменные конструктора (var int count;)
             UpdateMethodSymbolsTableByVars(statementVars, dict);
             methodSymbols = dict;
+
+            var varsCount = dict.Values.Count;
+
+            Write($"function {currentClassName}.{subroutine.Name.Value} {varsCount}");
+
+            Write($"push constant {argumentsCount}");  // указываем для скольки полей нам надо найти место в памяти
+            Write("call Memory.alloc 1");  // Находим место в памяти (теперь в стеке начальный адрес объекта)
+            Write($"pop pointer 0");  // Устанавливаем this = ...
 
             var statements = subroutineBody.Statements;
             WriteStatements(statements);
@@ -69,20 +72,22 @@ namespace JackCompiling
         /// </summary>
         private void WriteMethod(SubroutineDecSyntax subroutine)
         {
-            var arguments = subroutine.ParameterList.DelimitedParameters;  // Аргументы метода
-
-            Write($"function {currentClassName}.{subroutine.Name.Value} {arguments.Count + 1}");
+            var arguments = subroutine.ParameterList.DelimitedParameters;  // Аргументы метода            
 
             var dict = CreateMethodSymbolsTableByArguments(arguments);
-
-            Write("push argument 0");  // Кладем в стек this (его передали первым параметром)
-            Write("pop pointer 0");  // this = argument 0
 
             var subroutineBody = subroutine.SubroutineBody;
 
             var statementVars = subroutineBody.VarDec;  // Переменные метода (var int count;)
             UpdateMethodSymbolsTableByVars(statementVars, dict);
             methodSymbols = dict;
+
+            var varsCount = dict.Values.Count;            
+
+            Write($"function {currentClassName}.{subroutine.Name.Value} {varsCount}");
+
+            Write("push argument 0");  // Кладем в стек this (его передали первым параметром)
+            Write("pop pointer 0");  // this = argument 0
 
             var statements = subroutineBody.Statements;
             WriteStatements(statements);
@@ -98,8 +103,6 @@ namespace JackCompiling
         {
             var arguments = subroutine.ParameterList.DelimitedParameters;  // Аргументы функции
 
-            Write($"function {currentClassName}.{subroutine.Name.Value} {arguments.Count}");
-
             var dict = CreateMethodSymbolsTableByArguments(arguments);
 
             var subroutineBody = subroutine.SubroutineBody;
@@ -108,13 +111,17 @@ namespace JackCompiling
             UpdateMethodSymbolsTableByVars(statementVars, dict);
             methodSymbols = dict;
 
+            var varsCount = dict.Values.Count;
+
+            Write($"function {currentClassName}.{subroutine.Name.Value} {varsCount}");
+
             var statements = subroutineBody.Statements;
             WriteStatements(statements);
 
             if (subroutine.ReturnType.Value == "void")
                 Write("pop temp 0");
         }
-        #endregion
+        
         /// <summary>
         /// ObjOrClassName . SubroutineName ( ExpressionList ) 
         /// </summary>
@@ -122,29 +129,36 @@ namespace JackCompiling
         {
             if (term is not SubroutineCallTermSyntax)
                 return false;
-            var trm = term as SubroutineCallTermSyntax;
-            var call = trm.Call;
+
+            var subroutineTerm = term as SubroutineCallTermSyntax;
+
+            var call = subroutineTerm.Call;
+
             var arguments = call.Arguments.DelimitedExpressions;
             var argumentsCount = arguments.Count;
-            foreach (var arg in arguments)
-                WriteExpression(arg);
 
-            var objectOrClassName = call.ObjectOrClass.Name.Value;
+            var objectOrClass = call.ObjectOrClass;
+            var objectOrClassName = objectOrClass == null ? currentClassName : objectOrClass.Name.Value;
 
+            var objectInfo = FindVarInfo(objectOrClassName);
 
-            if (FindVarInfo(objectOrClassName) != null)  // Если был вызван метод, а не конструктор или функция
+            if (objectInfo != null)  // Елси это объект, то ...
             {
-                Write("push pointer 0");
-                argumentsCount++;
-            }
+                Write("push pointer 0");  // то пушим this в стек
+                argumentsCount++;  // Увеличиваем количество аргуметов, которые мы передадим методу
+                objectOrClassName = objectInfo.Type;  // вызывать будем метод из класса, который является типом объекта
+            }            
 
-            var subroutineName = call.SubroutineName.Value;            
+            foreach (var argument in arguments)
+                WriteExpression(argument);
 
-            Write($"call {objectOrClassName}.{subroutineName} {argumentsCount}");
+            var subroitineName = call.SubroutineName.Value;
+
+            Write($"call {objectOrClassName}.{subroitineName} {argumentsCount}");
 
             return true;
         }
-        #region временно спрятать
+        #endregion
         /// <summary>
         /// do SubroutineCall ; 
         /// </summary>
@@ -171,7 +185,7 @@ namespace JackCompiling
 
             return true;
         }
-
+        #region временно спрятать
         /// <summary>
         /// return ;
         /// return Expression ;
@@ -226,6 +240,7 @@ namespace JackCompiling
                 dict[parameterName] = new VarInfo(parameterIndex, VarKind.Parameter, parameter.Type.Value);
                 parameterIndex++;
             }
+
             return dict;
         }
 
