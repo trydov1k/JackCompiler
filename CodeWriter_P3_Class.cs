@@ -134,6 +134,13 @@ namespace JackCompiling
 
             var call = subroutineTerm.Call;
 
+            WriteCall(call);
+
+            return true;
+        }
+
+        private void WriteCall(SubroutineCall call)
+        {
             var arguments = call.Arguments.DelimitedExpressions;
             var argumentsCount = arguments.Count;
 
@@ -144,10 +151,10 @@ namespace JackCompiling
 
             if (objectInfo != null)  // Елси это объект, то ...
             {
-                Write("push pointer 0");  // то пушим this в стек
+                Write($"push {objectInfo.SegmentName} {objectInfo.Index}");  // то пушим this в стек
                 argumentsCount++;  // Увеличиваем количество аргуметов, которые мы передадим методу
                 objectOrClassName = objectInfo.Type;  // вызывать будем метод из класса, который является типом объекта
-            }            
+            }
 
             foreach (var argument in arguments)
                 WriteExpression(argument);
@@ -155,10 +162,8 @@ namespace JackCompiling
             var subroitineName = call.SubroutineName.Value;
 
             Write($"call {objectOrClassName}.{subroitineName} {argumentsCount}");
-
-            return true;
         }
-        #endregion
+        
         /// <summary>
         /// do SubroutineCall ; 
         /// </summary>
@@ -167,25 +172,15 @@ namespace JackCompiling
             if (statement is not DoStatementSyntax)
                 return false;
 
-            var trm = statement as DoStatementSyntax;
+            var doStatement = statement as DoStatementSyntax;
 
-            var call = trm.SubroutineCall;
+            WriteCall(doStatement.SubroutineCall);
 
-            var arguments = call.Arguments.DelimitedExpressions;
-            var argumentsCount = arguments.Count;
-            foreach (var arg in arguments)
-                WriteExpression(arg);
-
-            var objectOrClassName = call.ObjectOrClass.Name.Value;
-
-            var subroutineName = call.SubroutineName.Value;
-
-            Write($"call {objectOrClassName}.{subroutineName} {argumentsCount}");
             Write("pop temp 0");
 
             return true;
         }
-        #region временно спрятать
+        
         /// <summary>
         /// return ;
         /// return Expression ;
@@ -201,7 +196,8 @@ namespace JackCompiling
             Write("return");
             return true;
         }
-
+        #endregion
+        #region временно спрятать
         /// <summary>
         /// this | null
         /// </summary>
@@ -210,7 +206,7 @@ namespace JackCompiling
             return false;
         }
         #endregion
-
+        #region Мои вспомогательные методы
         private void CreateClassSymbolsTable(IReadOnlyList<ClassVarDecSyntax> classVarList)
         {
             var classVarIndex = 0;
@@ -256,5 +252,6 @@ namespace JackCompiling
                 }
             }
         }
+        #endregion
     }
 }
