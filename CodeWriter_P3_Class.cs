@@ -72,9 +72,10 @@ namespace JackCompiling
         /// </summary>
         private void WriteMethod(SubroutineDecSyntax subroutine)
         {
-            var arguments = subroutine.ParameterList.DelimitedParameters;  // Аргументы метода            
+            var arguments = subroutine.ParameterList.DelimitedParameters;  // Аргументы метода
+            var newArguments = arguments.Prepend(new Parameter(new Token(TokenType.Keyword, "this", 0, 0), new Token(TokenType.Identifier, "this", 0, 0)));
 
-            var dict = CreateMethodSymbolsTableByArguments(arguments);
+            var dict = CreateMethodSymbolsTableByArguments(newArguments.ToList());
 
             var subroutineBody = subroutine.SubroutineBody;
 
@@ -163,7 +164,8 @@ namespace JackCompiling
 
             Write($"call {objectOrClassName}.{subroitineName} {argumentsCount}");
         }
-        
+        #endregion
+        #region Работает 100%
         /// <summary>
         /// do SubroutineCall ; 
         /// </summary>
@@ -196,14 +198,23 @@ namespace JackCompiling
             Write("return");
             return true;
         }
-        #endregion
-        #region временно спрятать
+        
         /// <summary>
         /// this | null
         /// </summary>
         private bool TryWriteObjectValue(TermSyntax term)
         {
-            return false;
+            var valueTerm = term as ValueTermSyntax;
+
+            if (valueTerm == null || valueTerm.Value.TokenType != TokenType.Keyword 
+                || !(valueTerm.Value.Value == "this" || valueTerm.Value.Value == "that"))
+                return false;            
+
+            var poinerNumber = valueTerm.Value.Value == "this" ? 0 : 1;
+
+            Write($"push pointer {poinerNumber}");
+
+            return true;
         }
         #endregion
         #region Мои вспомогательные методы

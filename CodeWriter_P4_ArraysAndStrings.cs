@@ -9,13 +9,10 @@ namespace JackCompiling
         /// </summary>
         private bool TryWriteStringValue(TermSyntax term)
         {
-            if (term is not ValueTermSyntax)
+            if (term is not ValueTermSyntax || ((ValueTermSyntax)term).Value.TokenType != TokenType.StringConstant)
                 return false;
 
             var valueTerm = term as ValueTermSyntax;
-
-            if (valueTerm.Value.TokenType != TokenType.StringConstant)
-                return false;
 
             var stringConstant = valueTerm.Value.Value;
 

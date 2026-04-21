@@ -24,14 +24,6 @@ namespace JackCompiling
             { "~", "not" }
         };
 
-        private static Dictionary<string, string> KeywordConstantToVm = new()
-        {
-            { "true", "push constant -1" },
-            { "false", "push constant 0" },
-            { "this", "push pointer 0" },
-            { "that", "push pointer 1" }
-        };
-
         /// <summary>2+x</summary>
         public void WriteExpression(ExpressionSyntax expression)
         {
@@ -83,8 +75,8 @@ namespace JackCompiling
                     Write($"push constant {term.Value.IntValue}");
                     break;
                 case TokenType.Keyword:
-                    var vmLine = KeywordConstantToVm[term.Value.Value];
-                    Write(vmLine);
+                    var value = term.Value.Value == "true" ? "-1" : "0";
+                    Write($"push constant {value}");
                     break;
                 case TokenType.Identifier:
                     var info = FindVarInfo(term.Value.Value);
