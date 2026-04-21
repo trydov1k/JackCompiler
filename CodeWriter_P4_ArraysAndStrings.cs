@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 
 namespace JackCompiling
 {
@@ -55,7 +56,24 @@ namespace JackCompiling
         /// </summary>
         private bool TryWriteArrayAssignmentStatement(StatementSyntax statement)
         {
-            return false;
+            var letStatement = statement as LetStatementSyntax;
+            if (letStatement == null || letStatement.Index == null)
+                return false;            
+
+            var varName = letStatement.VarName;
+            var info = FindVarInfo(varName.Value);
+            var segmentName = info.SegmentName;
+            var segmentIndex = info.Index;
+
+            var expression = letStatement.Value;
+            WriteExpression(expression);
+
+            var index = letStatement.Index.Index;
+
+            WriteIndexValueToStack(index, segmentName, segmentIndex);
+            Write("pop that 0");
+
+            return true;
         }
 
         private void WriteIndexValueToStack(ExpressionSyntax index, string segmentName, int segmentIndex)

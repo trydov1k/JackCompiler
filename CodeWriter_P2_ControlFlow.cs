@@ -26,7 +26,7 @@ namespace JackCompiling
         /// <summary>let VarName = Expression;</summary>
         private bool TryWriteVarAssignmentStatement(StatementSyntax statement)
         {
-            if (statement is not LetStatementSyntax)
+            if (statement is not LetStatementSyntax || ((LetStatementSyntax)statement).Index != null)
                 return false;
             var letStatement = (LetStatementSyntax)statement;
 
@@ -38,15 +38,7 @@ namespace JackCompiling
             var segmentName = info.SegmentName;
             var segmentIndex = info.Index;
 
-            if (letStatement.Index == null)
-                Write($"pop {segmentName} {segmentIndex}");
-            else
-            {
-                var index = letStatement.Index.Index;
-
-                WriteIndexValueToStack(index, segmentName, segmentIndex);
-                Write("pop that 0");
-            }
+            Write($"pop {segmentName} {segmentIndex}");            
 
             return true;
         }
