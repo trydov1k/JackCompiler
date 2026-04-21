@@ -145,15 +145,22 @@ namespace JackCompiling
             var argumentsCount = arguments.Count;
 
             var objectOrClass = call.ObjectOrClass;
+
+            if (objectOrClass == null)  // Это метод, который вызвали из другого метода ( myMethod() )
+            {
+                Write("push pointer 0");
+                argumentsCount++;
+            }
+
             var objectOrClassName = objectOrClass == null ? currentClassName : objectOrClass.Name.Value;
 
             var objectInfo = FindVarInfo(objectOrClassName);
 
-            if (objectInfo != null)  // Если это объект, то ...
+            if (objectInfo != null)  // Это метод ( obj.myMethod() )
             {
-                Write($"push {objectInfo.SegmentName} {objectInfo.Index}");  // то пушим this в стек
+                Write($"push {objectInfo.SegmentName} {objectInfo.Index}");  // Пушим this в стек
                 argumentsCount++;  // Увеличиваем количество аргуметов, которые мы передадим методу
-                objectOrClassName = objectInfo.Type;  // вызывать будем метод из класса, который является типом объекта
+                objectOrClassName = objectInfo.Type;  // Вызывать будем метод из класса, который является типом объекта
             }
 
             foreach (var argument in arguments)
