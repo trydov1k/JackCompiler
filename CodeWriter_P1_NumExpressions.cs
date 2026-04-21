@@ -70,8 +70,6 @@ namespace JackCompiling
                 WriteUnaryOpTermSyntax((UnaryOpTermSyntax)term);
             else if (term is ParenthesizedTermSyntax)  // (x+y)
                 WriteParenthesizedTermSyntax((ParenthesizedTermSyntax)term);
-            else if (term is SubroutineCallTermSyntax)  // Main.f(0) | point1.GetX()
-                WriteSubroutineCallTermSyntax((SubroutineCallTermSyntax)term);
             else
                 return false;  // Если это неизвестная штучка, возвращаем false
 
@@ -129,20 +127,6 @@ namespace JackCompiling
         {
             WriteExpression(term.Expression);
         }
-
-        private void WriteSubroutineCallTermSyntax(SubroutineCallTermSyntax term)
-        {
-            var call = term.Call;
-            foreach (var arg in call.Arguments.DelimitedExpressions)
-                WriteExpression(arg);
-
-            var objectOrClassName = call.ObjectOrClass.Name.Value;
-            var subroutineName = call.SubroutineName.Value;
-            var argumentsCount = call.Arguments.DelimitedExpressions.Count;
-
-            Write($"call {objectOrClassName}.{subroutineName} {argumentsCount}");
-        }
-
 
         private void WriteIndexValueToStack(ExpressionSyntax index, string segmentName, int segmentIndex)
         {
