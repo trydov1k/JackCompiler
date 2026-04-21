@@ -32,7 +32,22 @@ namespace JackCompiling
         /// </summary>
         private bool TryWriteArrayAccess(TermSyntax term)
         {
-            return false;
+            var valueTerm = term as ValueTermSyntax;
+
+            if (valueTerm == null || valueTerm.Indexing == null || valueTerm.Value.TokenType != TokenType.Identifier)
+                return false;
+
+            var info = FindVarInfo(valueTerm.Value.Value);
+            var segmentName = info.SegmentName;
+            var segmentIndex = info.Index;
+
+            var index = valueTerm.Indexing.Index;
+
+            WriteIndexValueToStack(index, segmentName, segmentIndex);
+            Write($"push that 0");
+
+
+            return true;
         }
 
         /// <summary>
@@ -41,6 +56,14 @@ namespace JackCompiling
         private bool TryWriteArrayAssignmentStatement(StatementSyntax statement)
         {
             return false;
+        }
+
+        private void WriteIndexValueToStack(ExpressionSyntax index, string segmentName, int segmentIndex)
+        {
+            WriteExpression(index);
+            Write($"push {segmentName} {segmentIndex}");
+            Write("add");
+            Write($"pop pointer 1");
         }
     }
 }

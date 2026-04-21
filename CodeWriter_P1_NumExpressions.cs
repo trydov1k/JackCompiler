@@ -71,27 +71,19 @@ namespace JackCompiling
         {
             switch (term.Value.TokenType)
             {
-                case TokenType.IntegerConstant:
+                case TokenType.IntegerConstant:  // 12 / 1 / 245
                     Write($"push constant {term.Value.IntValue}");
                     break;
-                case TokenType.Keyword:
+                case TokenType.Keyword:  // true / false
                     var value = term.Value.Value == "true" ? "-1" : "0";
                     Write($"push constant {value}");
                     break;
-                case TokenType.Identifier:
+                case TokenType.Identifier:  // x / y / obj 
                     var info = FindVarInfo(term.Value.Value);
                     var segmentName = info.SegmentName;
                     var segmentIndex = info.Index;
 
-                    if (term.Indexing != null)
-                    {
-                        var index = term.Indexing.Index;
-
-                        WriteIndexValueToStack(index, segmentName, segmentIndex);
-                        Write($"push that 0");
-                    }
-                    else
-                        Write($"push {segmentName} {segmentIndex}");
+                    Write($"push {segmentName} {segmentIndex}");
                     break;
             }
         }
@@ -106,14 +98,6 @@ namespace JackCompiling
         private void WriteParenthesizedTermSyntax(ParenthesizedTermSyntax term)
         {
             WriteExpression(term.Expression);
-        }
-
-        private void WriteIndexValueToStack(ExpressionSyntax index, string segmentName, int segmentIndex)
-        {
-            WriteExpression(index);
-            Write($"push {segmentName} {segmentIndex}");
-            Write("add");
-            Write($"pop pointer 1");
         }
     }
 }

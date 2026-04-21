@@ -42,7 +42,6 @@ namespace JackCompiling
         /// </summary>
         private void WriteConstructor(SubroutineDecSyntax subroutine)
         {
-
             var arguments = subroutine.ParameterList.DelimitedParameters;  // Аргументы конструктора
 
             var dict = CreateMethodSymbolsTableByArguments(arguments);
@@ -85,7 +84,7 @@ namespace JackCompiling
 
             var varsCount = dict.Values.Count;            
 
-            Write($"function {currentClassName}.{subroutine.Name.Value} {varsCount}");
+            Write($"function {currentClassName}.{subroutine.Name.Value} {varsCount - 1}");
 
             Write("push argument 0");  // Кладем в стек this (его передали первым параметром)
             Write("pop pointer 0");  // this = argument 0
@@ -150,7 +149,7 @@ namespace JackCompiling
 
             var objectInfo = FindVarInfo(objectOrClassName);
 
-            if (objectInfo != null)  // Елси это объект, то ...
+            if (objectInfo != null)  // Если это объект, то ...
             {
                 Write($"push {objectInfo.SegmentName} {objectInfo.Index}");  // то пушим this в стек
                 argumentsCount++;  // Увеличиваем количество аргуметов, которые мы передадим методу
