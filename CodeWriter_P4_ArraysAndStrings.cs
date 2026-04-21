@@ -1,5 +1,3 @@
-using System;
-using System.Reflection;
 
 namespace JackCompiling
 {
@@ -46,7 +44,6 @@ namespace JackCompiling
 
             WriteIndexValueToStack(index, segmentName, segmentIndex);
             Write($"push that 0");
-
 
             return true;
         }
