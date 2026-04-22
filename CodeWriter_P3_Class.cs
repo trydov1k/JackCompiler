@@ -200,7 +200,10 @@ namespace JackCompiling
             var returnStatement = statement as ReturnStatementSyntax;
 
             var returnValue = returnStatement.ReturnValue;
-            WriteExpression(returnValue);
+            if (returnValue != null)
+                WriteExpression(returnValue);
+            else
+                Write("push constant 0");
             Write("return");
             return true;
         }
