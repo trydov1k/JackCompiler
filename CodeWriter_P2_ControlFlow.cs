@@ -26,9 +26,9 @@ namespace JackCompiling
         /// <summary>let VarName = Expression;</summary>
         private bool TryWriteVarAssignmentStatement(StatementSyntax statement)
         {
-            if (statement is not LetStatementSyntax || ((LetStatementSyntax)statement).Index != null)
-                return false;
-            var letStatement = (LetStatementSyntax)statement;
+            var letStatement = statement as LetStatementSyntax;
+            if (letStatement == null || letStatement.Index != null)
+                return false;            
 
             var expression = letStatement.Value;
             WriteExpression(expression);

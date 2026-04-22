@@ -6,7 +6,6 @@ namespace JackCompiling
 {
     public partial class CodeWriter
     {
-        #region Реализовано
         /// <summary>
         /// class Name { ... }
         /// </summary>
@@ -72,7 +71,9 @@ namespace JackCompiling
         private void WriteMethod(SubroutineDecSyntax subroutine)
         {
             var arguments = subroutine.ParameterList.DelimitedParameters;  // Аргументы метода
-            var newArguments = arguments.Prepend(new Parameter(new Token(TokenType.Keyword, "this", 0, 0), new Token(TokenType.Identifier, "this", 0, 0)));
+            var newArguments = arguments.Prepend(new Parameter(
+                new Token(TokenType.Keyword, "this", 0, 0), 
+                new Token(TokenType.Identifier, "this", 0, 0)));  // добавляем пустышку в начало
 
             var dict = CreateMethodSymbolsTableByArguments(newArguments.ToList());
 
@@ -166,12 +167,11 @@ namespace JackCompiling
             foreach (var argument in arguments)
                 WriteExpression(argument);
 
-            var subroitineName = call.SubroutineName.Value;
+            var subroutineName = call.SubroutineName.Value;
 
-            Write($"call {objectOrClassName}.{subroitineName} {argumentsCount}");
+            Write($"call {objectOrClassName}.{subroutineName} {argumentsCount}");
         }
-        #endregion
-        #region Работает 100%
+        
         /// <summary>
         /// do SubroutineCall ; 
         /// </summary>
@@ -225,7 +225,7 @@ namespace JackCompiling
 
             return true;
         }
-        #endregion
+        
         #region Мои вспомогательные методы
         private void CreateClassSymbolsTable(IReadOnlyList<ClassVarDecSyntax> classVarList)
         {
@@ -235,7 +235,7 @@ namespace JackCompiling
                 var varKindString = classVar.KindKeyword.Value;
                 var varKind = varKindString == "field" ? VarKind.Field
                     : varKindString == "static" ? VarKind.Static
-                    : throw new ArgumentException($"Это должна быть переменная вида field или static, а было {varKindString}");
+                    : throw new ArgumentException($"Должно быть field или static, а было {varKindString}");
 
                 foreach (var classVarName in classVar.DelimitedNames)
                 {
